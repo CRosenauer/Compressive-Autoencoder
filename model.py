@@ -115,11 +115,11 @@ if __name__ == "__main__":
 
 
 
-    files = glob.glob("./data/130k/*/*.jpeg", recursive=True)
+    files = glob.glob("./data/130k/*/*.jp*g", recursive=True)
 
     n_files = len(files)
 
-    itr_size = 20000
+    itr_size = 5000
     n_itrs = math.ceil(n_files / itr_size)
 
     for i in range(0, n_itrs):
