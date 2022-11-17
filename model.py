@@ -3,6 +3,7 @@ import os
 import glob
 import cv2
 import numpy
+import math
 
 
 @tf.custom_gradient
@@ -16,7 +17,8 @@ def c_func(x):
     result = result / 255.0
 
     def grad(dy):
-        return tf.ones_like(dy, dtype=tf.dtypes.float32)
+        grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
+        return grad_out
 
     return result, grad
 
@@ -24,14 +26,13 @@ def c_func(x):
 class ClipSimNormalize(tf.keras.layers.Layer):
     def __init__(self):
         super(ClipSimNormalize, self).__init__()
-
     def call(self, x):
         return c_func(x)
 
 
 def create_model():
     # encoder
-    encoder_input = tf.keras.Input(shape=(512, 512, 3,), dtype=tf.float32, name="img_in")
+    encoder_input = tf.keras.Input(shape=(512, 512, 3), dtype=tf.float32, name="img_in")
 
     x = tf.pad(encoder_input, [[0, 0], [2, 2], [2, 2], [0, 0]], 'REFLECT')
     x = tf.keras.layers.Conv2D(filters=64, kernel_size=[5, 5], strides=2, input_shape=x.shape)(x)
@@ -65,6 +66,7 @@ def create_model():
 
     # quantize
     decoder_input = ClipSimNormalize()(encoder_output)
+    # decoder_input = encoder_output
 
     # decoder
     sub_pixel_factor = 2
@@ -97,6 +99,7 @@ def create_model():
 
     # clip
     decoder_output = ClipSimNormalize()(x)
+    # decoder_output = x
 
     autoencoder = tf.keras.Model(inputs=encoder_input, outputs=decoder_output, name="CAE_model")
     return autoencoder
@@ -110,21 +113,31 @@ if __name__ == "__main__":
             metrics=['accuracy']
             )
 
-    # need to trip data. not enough ram
-    X_data = []
-    files = glob.glob("./data/130k/toys/*.jpeg", recursive=True)
-    for myFile in files:
-        image = cv2.imread(myFile)
-        X_data.append(image)
 
-    X_data = numpy.array(X_data)
-    X_data.astype('float32') / 255
 
-    checkpoint_path = "training_1/cp.ckpt"
-    checkpoint_dir = os.path.dirname(checkpoint_path)
-    cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True, verbose=1)
+    files = glob.glob("./data/130k/*/*.jpeg", recursive=True)
 
-    # CAE.load_weights(checkpoint_path)
+    n_files = len(files)
 
-    CAE.fit(X_data, X_data, epochs=32, shuffle=True, callbacks=[cp_callback], validation_split=0.25)
-    CAE.evaluate(X_data, X_data, callbacks=[cp_callback])
+    itr_size = 20000
+    n_itrs = math.ceil(n_files / itr_size)
+
+    for i in range(0, n_itrs):
+        # need to trip data. not enough ram
+        X_data = []
+
+        for j in range(i * itr_size, min(n_files, (i + 1) * itr_size)):
+            image = cv2.imread(files[j])
+            X_data.append(image)
+
+        X_data = numpy.array(X_data)
+        X_data.astype('float32') / 255
+
+        checkpoint_path = "training_1/cp.ckpt"
+        checkpoint_dir = os.path.dirname(checkpoint_path)
+        cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True, verbose=1)
+
+        # CAE.load_weights(checkpoint_path)
+
+        CAE.fit(X_data, X_data, epochs=32, shuffle=True, callbacks=[cp_callback], validation_split=0.25)
+        CAE.evaluate(X_data, X_data, callbacks=[cp_callback])
