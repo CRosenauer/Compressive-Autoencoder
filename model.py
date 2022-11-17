@@ -29,27 +29,6 @@ class ClipSimNormalize(tf.keras.layers.Layer):
         return c_func(x)
 
 
-@tf.custom_gradient
-def q_func(x):
-    result = tf.clip_by_value(x, 0.0, 1.0)
-    result = result * 255.0
-    result = tf.round(result)
-    result = result / 255.0
-
-    def grad(dy):
-        return dy
-
-    return result, grad
-
-
-class Quantize(tf.keras.layers.Layer):
-    def __init__(self):
-        super(Quantize, self).__init__()
-
-    def call(self, x):
-        return q_func(x)
-
-
 def create_model():
     # encoder
     encoder_input = tf.keras.Input(shape=(512, 512, 3,), dtype=tf.float32, name="img_in")
@@ -85,7 +64,7 @@ def create_model():
     encoder_output = tf.keras.layers.Conv2D(filters=96, kernel_size=[5, 5], strides=2, input_shape=x.shape)(x)
 
     # quantize
-    decoder_input = Quantize()(encoder_output)
+    decoder_input = ClipSimNormalize()(encoder_output)
 
     # decoder
     sub_pixel_factor = 2
