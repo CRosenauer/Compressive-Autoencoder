@@ -119,7 +119,7 @@ def create_model():
 if __name__ == "__main__":
     CAE = create_model()
     CAE.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
             loss=tf.keras.losses.MeanSquaredError(),
             metrics=['accuracy']
             )
