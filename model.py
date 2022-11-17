@@ -1,9 +1,24 @@
 import tensorflow as tf
 import os
-import random
 import glob
 import cv2
 import numpy
+
+
+@tf.custom_gradient
+def c_func(x):
+    # needs to mirror Quantize as the model must function with float32 outputs due to the supported args of the loss
+    # function. functionally it just simulates de-normalizing and clipping, but reverts the data to float os loss
+    # measurement can be performed properly.
+    result = tf.clip_by_value(x, 0.0, 1.0)
+    result = result * 255.0
+    result = tf.round(result)
+    result = result / 255.0
+
+    def grad(dy):
+        return tf.ones_like(dy, dtype=tf.dtypes.float32)
+
+    return result, grad
 
 
 class ClipSimNormalize(tf.keras.layers.Layer):
@@ -11,18 +26,20 @@ class ClipSimNormalize(tf.keras.layers.Layer):
         super(ClipSimNormalize, self).__init__()
 
     def call(self, x):
-        # needs to mirror Quantize as the model must function with float32 outputs due to the supported args of the loss
-        # function. functionally it just simulates de-normalizing and clipping, but reverts the data to float os loss
-        # measurement can be performed properly.
-        result = tf.clip_by_value(x, 0.0, 1.0)
-        result = result * 255.0
-        result = tf.round(result)
-        result = result / 255.0
+        return c_func(x)
 
-        def grad(dy):
-            return tf.ones(shape=dy.shape)
 
-        return result
+@tf.custom_gradient
+def q_func(x):
+    result = tf.clip_by_value(x, 0.0, 1.0)
+    result = result * 255.0
+    result = tf.round(result)
+    result = result / 255.0
+
+    def grad(dy):
+        return dy
+
+    return result, grad
 
 
 class Quantize(tf.keras.layers.Layer):
@@ -30,15 +47,7 @@ class Quantize(tf.keras.layers.Layer):
         super(Quantize, self).__init__()
 
     def call(self, x):
-        result = tf.clip_by_value(x, 0.0, 1.0)
-        result = result * 255.0
-        result = tf.round(result)
-        result = result / 255.0
-
-        def grad(dy):
-            return dy
-
-        return result
+        return q_func(x)
 
 
 def create_model():
@@ -76,8 +85,7 @@ def create_model():
     encoder_output = tf.keras.layers.Conv2D(filters=96, kernel_size=[5, 5], strides=2, input_shape=x.shape)(x)
 
     # quantize
-    # decoder_input = Quantize()(encoder_output)
-    decoder_input = encoder_output
+    decoder_input = Quantize()(encoder_output)
 
     # decoder
     sub_pixel_factor = 2
@@ -109,8 +117,7 @@ def create_model():
     x = tf.nn.depth_to_space(x, sub_pixel_factor)
 
     # clip
-    # decoder_output = ClipSimNormalize()(x)
-    decoder_output = x
+    decoder_output = ClipSimNormalize()(x)
 
     autoencoder = tf.keras.Model(inputs=encoder_input, outputs=decoder_output, name="CAE_model")
     return autoencoder
