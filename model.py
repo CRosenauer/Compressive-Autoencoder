@@ -113,13 +113,11 @@ if __name__ == "__main__":
             metrics=['accuracy']
             )
 
-
-
     files = glob.glob("./data/130k/*/*.jp*g", recursive=True)
 
     n_files = len(files)
 
-    itr_size = 5000
+    itr_size = 2000
     n_itrs = math.ceil(n_files / itr_size)
 
     for i in range(0, n_itrs):
@@ -128,10 +126,9 @@ if __name__ == "__main__":
 
         for j in range(i * itr_size, min(n_files, (i + 1) * itr_size)):
             image = cv2.imread(files[j])
-            X_data.append(image)
+            X_data.append(image / 255.0)
 
-        X_data = numpy.array(X_data)
-        X_data.astype('float32') / 255
+        X_data = numpy.array(X_data, dtype='float32')
 
         checkpoint_path = "training_1/cp.ckpt"
         checkpoint_dir = os.path.dirname(checkpoint_path)
