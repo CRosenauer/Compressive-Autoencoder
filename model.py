@@ -8,13 +8,7 @@ import math
 
 @tf.custom_gradient
 def c_func(x):
-    # needs to mirror Quantize as the model must function with float32 outputs due to the supported args of the loss
-    # function. functionally it just simulates de-normalizing and clipping, but reverts the data to float os loss
-    # measurement can be performed properly.
     result = tf.clip_by_value(x, 0.0, 1.0)
-    result = result * 255.0
-    result = tf.round(result)
-    result = result / 255.0
 
     def grad(dy):
         grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
@@ -28,6 +22,27 @@ class ClipSimNormalize(tf.keras.layers.Layer):
         super(ClipSimNormalize, self).__init__()
     def call(self, x):
         return c_func(x)
+
+
+@tf.custom_gradient
+def q_func(x):
+    result = tf.clip_by_value(x, 0.0, 1.0)
+    result = result * 255.0
+    result = tf.round(result)
+    result = result / 255.0
+
+    def grad(dy):
+        grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
+        return grad_out
+
+    return result, grad
+
+
+class QuantizeEmulation(tf.keras.layers.Layer):
+    def __init__(self):
+        super(QuantizeEmulation, self).__init__()
+    def call(self, x):
+        return q_func(x)
 
 
 def create_model():
@@ -65,7 +80,7 @@ def create_model():
     encoder_output = tf.keras.layers.Conv2D(filters=96, kernel_size=[5, 5], strides=2, input_shape=x.shape)(x)
 
     # quantize
-    decoder_input = ClipSimNormalize()(encoder_output)
+    decoder_input = QuantizeEmulation()(encoder_output)
     # decoder_input = encoder_output
 
     # decoder
@@ -136,5 +151,7 @@ if __name__ == "__main__":
 
         # CAE.load_weights(checkpoint_path)
 
-        CAE.fit(X_data, X_data, epochs=32, shuffle=True, callbacks=[cp_callback], validation_split=0.25)
-        CAE.evaluate(X_data, X_data, callbacks=[cp_callback])
+        CAE.fit(X_data, X_data, epochs=3000, shuffle=True, validation_split=0.25) # callbacks=[cp_callback],
+        break
+
+    # CAE.evaluate(X_data, X_data)
