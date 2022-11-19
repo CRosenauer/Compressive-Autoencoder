@@ -47,7 +47,7 @@ class QuantizeEmulation(tf.keras.layers.Layer):
 
 def create_model():
     # encoder
-    encoder_input = tf.keras.Input(shape=(512, 512, 3), dtype=tf.float32, name="img_in")
+    encoder_input = tf.keras.Input(shape=(128, 128, 3), dtype=tf.float32, name="img_in")
 
     x = tf.pad(encoder_input, [[0, 0], [2, 2], [2, 2], [0, 0]], 'REFLECT')
     x = tf.keras.layers.Conv2D(filters=64, kernel_size=[5, 5], strides=2, input_shape=x.shape)(x)
@@ -123,12 +123,12 @@ def create_model():
 if __name__ == "__main__":
     CAE = create_model()
     CAE.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-5),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-8),
             loss=tf.keras.losses.MeanSquaredError(),
             metrics=['accuracy']
             )
 
-    files = glob.glob("./data/130k/*/*.jp*g", recursive=True)
+    files = glob.glob("./data/training/*.png", recursive=True)
 
     n_files = len(files)
 
@@ -151,7 +151,7 @@ if __name__ == "__main__":
 
         # CAE.load_weights(checkpoint_path)
 
-        CAE.fit(X_data, X_data, epochs=3000, shuffle=True, validation_split=0.25) # callbacks=[cp_callback],
+        CAE.fit(X_data, X_data, epochs=10000000, shuffle=True, validation_split=0.25) # callbacks=[cp_callback],
         break
 
     # CAE.evaluate(X_data, X_data)
