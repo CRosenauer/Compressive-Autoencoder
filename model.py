@@ -3,8 +3,8 @@ import os
 import glob
 import cv2
 import numpy
-import math
-
+import random
+import gc
 
 @tf.custom_gradient
 def c_func(x):
@@ -138,11 +138,12 @@ def create_model():
 
     return autoencoder
 
+checkpoint_path = "training_1/cp.ckpt"
 
 if __name__ == "__main__":
     CAE = create_model()
     CAE.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-6),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
             loss=tf.keras.losses.MeanSquaredError(),
             metrics=['accuracy']
             )
@@ -151,27 +152,22 @@ if __name__ == "__main__":
 
     X_data = []
 
-    for file in files:
+    used_data = random.sample(range(1, len(files)), 55000)
+
+    for i in range(0, len(used_data)):
+        file = files[i]
         image = cv2.imread(file)
         X_data.append(image / 255.0)
 
+    del files
+    del used_data
+    gc.collect()
+
     X_data = numpy.array(X_data, dtype='float32')
 
-    checkpoint_path = "training_1/cp.ckpt"
     checkpoint_dir = os.path.dirname(checkpoint_path)
     cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True, verbose=1, save_best_only=True)
 
-    # CAE.load_weights(checkpoint_path)
+    CAE.load_weights(checkpoint_path)
 
-    CAE.fit(X_data, X_data, epochs=100, shuffle=True, validation_split=0.25, callbacks=[cp_callback])
-
-    model_input = tf.constant(X_data[0], dtype=tf.dtypes.float32, shape=[128, 128, 3])
-    model_output = CAE(X_data)
-
-    model_output = model_output * 255
-    model_output = model_output[0].numpy()
-    model_output = model_output.astype('uint8')
-
-    cv2.imwrite("output.png", model_output)
-
-    CAE.evaluate(X_data, X_data)
+    CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25, callbacks=[cp_callback])
