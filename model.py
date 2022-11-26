@@ -143,7 +143,7 @@ checkpoint_path = "training_1/cp.ckpt"
 if __name__ == "__main__":
     CAE = create_model()
     CAE.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
             loss=tf.keras.losses.MeanSquaredError(),
             metrics=['accuracy']
             )
