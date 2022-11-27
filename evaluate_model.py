@@ -9,9 +9,18 @@ import random
 import os
 import gc
 
+def Entropy(data):
+    prob = dict()
+    
+
 if __name__ == "__main__":
     CAE = create_model()
     CAE.load_weights(checkpoint_path)
+
+    CAE_input = CAE.input
+    encoded_output = CAE.layers[20].output
+    print(encoded_output.shape)
+    encoder = tf.keras.models.Model(CAE_input, encoded_output)
 
     print("Detecting input files. This may take some time.")
     files = glob.glob("./data/full/*/*.png", recursive=True)
@@ -62,11 +71,6 @@ if __name__ == "__main__":
             cv2.imwrite("validation_output" + str(i * batch_size + j) + ".png", model_output[j])
 
 """
-    CAE_input = CAE.input
-    encoded_output = CAE.layers[19].output
-    print(encoded_output.shape)
-    encoder = tf.keras.models.Model(CAE_input, encoded_output)
-
     encoded_data = encoder(X_data)
     # calculate entropy
 
