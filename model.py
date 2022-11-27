@@ -150,26 +150,28 @@ if __name__ == "__main__":
             metrics=['accuracy']
             )
 
-    files = glob.glob("./data/full//*.png", recursive=True)
+    print("Detecting input files. This may take some time.")
+    files = glob.glob("./data/full/*/*.png", recursive=True)
 
     X_data = []
 
     random.seed(0)  # constant seed to ensure same evaluation set between runs.
-    # used_data = random.sample(range(1, len(files)), 55000)
+    used_data = random.sample(range(1, len(files)), 55000)
 
-    """
+    print("Loading input files. This may take some time.")
     for i in range(0, len(used_data)):
         file = files[used_data[i]]
         image = cv2.imread(file)
         X_data.append(image / 255.0)
-    """
 
+    """
     for file in files:
         image = cv2.imread(file)
         X_data.append(image / 255.0)
+    """
 
     del files
-    # del used_data
+    del used_data
     gc.collect()
 
     X_data = numpy.array(X_data, dtype='float32')
@@ -179,5 +181,6 @@ if __name__ == "__main__":
 
     CAE.load_weights(checkpoint_path)
 
+    print("Beginning training.")
     CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25, callbacks=[cp_callback])
     # CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25)
