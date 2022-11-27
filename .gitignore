@@ -167,3 +167,4 @@ cython_debug/
 *.jpg
 *.jpeg
 /training_1
+/training_2

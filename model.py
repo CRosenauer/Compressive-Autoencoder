@@ -6,7 +6,7 @@ import numpy
 import random
 import gc
 
-@tf.custom_gradient
+@tf.grad_pass_through
 def c_func(x):
     result = tf.clip_by_value(x, 0.0, 1.0)
 
@@ -31,11 +31,11 @@ def q_func(x):
     result = tf.round(result)
     result = result / 255.0
 
-    def grad(dy):
-        grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
-        return grad_out
+    # def grad(dy):
+    #     grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
+    #     return grad_out
 
-    return result, grad
+    return result
 
 
 class QuantizeEmulation(tf.keras.layers.Layer):
@@ -43,25 +43,26 @@ class QuantizeEmulation(tf.keras.layers.Layer):
         super(QuantizeEmulation, self).__init__()
     def call(self, x):
         # return q_func(x)
-        return x
+        return q_func(x)
 
+@tf.grad_pass_through
 def r_func(x):
     result = x * 255.0
     result = tf.round(result)
     result = result / 255.0
 
-    def grad(dy):
-        grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
-        return grad_out
+    # def grad(dy):
+    #     grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
+    #     return grad_out
 
-    return result, grad
+    return result
 
 
 class Round(tf.keras.layers.Layer):
     def __init__(self):
         super(Round, self).__init__()
     def call(self, x):
-        return q_func(x)
+        return r_func(x)
 
 def create_model():
     # encoder
@@ -98,7 +99,7 @@ def create_model():
     encoder_output = tf.keras.layers.Conv2D(filters=96, kernel_size=[5, 5], strides=2, input_shape=x.shape)(x)
 
     # quantize
-    decoder_input = QuantizeEmulation()(encoder_output)
+    decoder_input = Round()(encoder_output)
 
     # decoder
     sub_pixel_factor = 2
@@ -129,7 +130,7 @@ def create_model():
     x = tf.keras.layers.Conv2D(filters=12, kernel_size=[3, 3], input_shape=x.shape, padding="same")(x)
     x = tf.nn.depth_to_space(x, sub_pixel_factor)
 
-    # clip
+    # clip and round
     decoder_output = QuantizeEmulation()(x)
 
     autoencoder = tf.keras.Model(inputs=encoder_input, outputs=decoder_output, name="CAE_model")
@@ -138,7 +139,8 @@ def create_model():
 
     return autoencoder
 
-checkpoint_path = "training_1/cp.ckpt"
+
+checkpoint_path = "training_2/cp.ckpt"
 
 if __name__ == "__main__":
     CAE = create_model()
@@ -148,19 +150,26 @@ if __name__ == "__main__":
             metrics=['accuracy']
             )
 
-    files = glob.glob("./data/full/*/*.png", recursive=True)
+    files = glob.glob("./data/full//*.png", recursive=True)
 
     X_data = []
 
-    used_data = random.sample(range(1, len(files)), 55000)
+    random.seed(0)  # constant seed to ensure same evaluation set between runs.
+    # used_data = random.sample(range(1, len(files)), 55000)
 
+    """
     for i in range(0, len(used_data)):
-        file = files[i]
+        file = files[used_data[i]]
+        image = cv2.imread(file)
+        X_data.append(image / 255.0)
+    """
+
+    for file in files:
         image = cv2.imread(file)
         X_data.append(image / 255.0)
 
     del files
-    del used_data
+    # del used_data
     gc.collect()
 
     X_data = numpy.array(X_data, dtype='float32')
@@ -171,3 +180,4 @@ if __name__ == "__main__":
     CAE.load_weights(checkpoint_path)
 
     CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25, callbacks=[cp_callback])
+    # CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25)
