@@ -166,5 +166,3 @@ cython_debug/
 *.png
 *.jpg
 *.jpeg
-/training_1
-/training_2
