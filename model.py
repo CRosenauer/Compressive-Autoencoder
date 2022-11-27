@@ -6,6 +6,9 @@ import numpy
 import random
 import gc
 
+
+round_parameter = 255.0
+
 @tf.grad_pass_through
 def c_func(x):
     result = tf.clip_by_value(x, 0.0, 1.0)
@@ -27,9 +30,9 @@ class ClipSimNormalize(tf.keras.layers.Layer):
 @tf.grad_pass_through
 def q_func(x):
     result = tf.clip_by_value(x, 0.0, 1.0)
-    result = result * 255.0
+    result = result * round_parameter
     result = tf.round(result)
-    result = result / 255.0
+    result = result / round_parameter
 
     # def grad(dy):
     #     grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
@@ -47,9 +50,9 @@ class QuantizeEmulation(tf.keras.layers.Layer):
 
 @tf.grad_pass_through
 def r_func(x):
-    result = x * 255.0
+    result = x * round_parameter
     result = tf.round(result)
-    result = result / 255.0
+    result = result / round_parameter
 
     # def grad(dy):
     #     grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
