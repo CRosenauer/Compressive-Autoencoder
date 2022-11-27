@@ -140,7 +140,7 @@ def create_model():
     return autoencoder
 
 
-checkpoint_path = "training_2/cp.ckpt"
+checkpoint_path = "training_1/cp.ckpt"
 
 if __name__ == "__main__":
     CAE = create_model()

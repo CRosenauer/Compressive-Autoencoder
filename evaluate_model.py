@@ -20,33 +20,32 @@ def Entropy(data):
     for i in range(0, 16):
         for j in range(0, 16):
             for k in range(0, 96):
-                prob[data[i, j, k]] = 0
+                key = data[i, j, k]
+                prob[key] = 0.0
 
     for i in range(0, 16):
         for j in range(0, 16):
             for k in range(0, 96):
-                prob[data[i, j, k]] = prob[data[i, j, k]] + inv_size
+                key = data[i, j, k]
+                prob[key] = prob[key] + inv_size
 
     entropy = 0.0
 
-    for k, v in dict.items():
+    for k, v in prob.items():
         entropy = entropy + v * math.log2(1 / v)
+
+    return entropy
 
 if __name__ == "__main__":
     CAE = create_model()
     CAE.load_weights(checkpoint_path)
-
-    CAE_input = CAE.input
-    encoded_output = CAE.layers[20].output
-    print(encoded_output.shape)
-    encoder = tf.keras.models.Model(CAE_input, encoded_output)
 
     print("Detecting input files. This may take some time.")
     files = glob.glob("./data/full/*/*.png", recursive=True)
 
     X_data = []
 
-    eval_set_size = 13750
+    eval_set_size = 250
 
     random.seed(1024)  # constant seed to ensure same evaluation set between runs.
     used_data = random.sample(range(1, len(files)), eval_set_size)
@@ -65,13 +64,11 @@ if __name__ == "__main__":
 
     print("Beginning generating output files.")
 
-    num_batches = 250
+    num_batches = 13750
     batch_size = int(eval_set_size / num_batches)
 
     write_input_file_dir = r"F:\School\ENSC 424\ML-Project\validation\validation_input"
     write_output_file_dir = r"F:\School\ENSC 424\ML-Project\validation\validation_output"
-
-    total_entropy = 0
 
     for i in range(0, num_batches):
         start = i * batch_size
@@ -89,16 +86,34 @@ if __name__ == "__main__":
 
         os.chdir(write_output_file_dir)
         for j in range(0, len(model_output)):
-            total_entropy + Entropy(model_output[j])
             cv2.imwrite("validation_output" + str(i * batch_size + j) + ".png", model_output[j])
 
+    CAE_input = CAE.input
+    encoded_output = CAE.layers[20].output
+    encoder = tf.keras.models.Model(CAE_input, encoded_output)
+
+    total_entropy = 0.0
+
+    print("Calculating average entropy of encoded images. This may take some time.")
+    for i in range(0, num_batches):
+        start = i * batch_size
+        end = (i+1) * batch_size
+        data = X_data[start:end]
+
+        model_output = encoder(data)
+        model_output = model_output * 255
+        model_output = model_output.numpy()
+        model_output = model_output.astype('uint8')
+
+        for j in range(0, len(model_output)):
+            total_entropy = total_entropy + Entropy(model_output[j])
+
     average_entropy = total_entropy / eval_set_size
-    print(average_entropy)
 
-"""
-    encoded_data = encoder(X_data)
-    # calculate entropy
+    print("Performing model evaluation")
+    CAE.compile(loss=tf.keras.losses.MeanSquaredError(),
+                metrics=['accuracy'])
+    CAE.evaluate(X_data, X_data)
 
-    del encoded_data
-    gc.collect()
-"""
+    print("Average Output Entropy: " + str(average_entropy))
+    print("Average Bits per color value: " + str(1.5 * average_entropy))
