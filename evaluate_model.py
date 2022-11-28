@@ -116,4 +116,5 @@ if __name__ == "__main__":
     CAE.evaluate(X_data, X_data)
 
     print("Average Output Entropy: " + str(average_entropy))
-    print("Average Bits per color value: " + str(1.5 * average_entropy))
+    print("Average Bits per Pixel: " + str(1.5 * average_entropy))
+    print("Average Compression Ratio: " + str((1.5 * average_entropy) / 24.0))
