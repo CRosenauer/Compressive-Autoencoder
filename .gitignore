@@ -168,3 +168,8 @@ cython_debug/
 *.jpg
 *.jpeg
 dct1.m
+demo.m
+entropy_cod.m
+get_quantization.m
+huffman_cod.m
+jpeg_computing.m
