@@ -1,4 +1,4 @@
-function comparePSNR(inputPath, outputPath, ratio)
+function comparePSNR(inputPath, outputPath)
     input = imageDatastore(inputPath);
     output = imageDatastore(outputPath);
 
@@ -28,8 +28,6 @@ function comparePSNR(inputPath, outputPath, ratio)
     end
 
     averagePSNR = averagePSNR / numImages;
-    disp("Average Compression Ratio:");
-    disp(ratio);
     disp("Average PSNR (dB):");
     disp(averagePSNR);
     disp("Perfect Matches:");
