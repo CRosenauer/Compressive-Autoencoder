@@ -28,7 +28,7 @@ function [averageCompressionRatio, averagePSNR, perfectMatches] = JPEGPSNR(input
     end
 
     for ii = 1:10
-        averageCompressionRatio(ii) = averageCompressionRatio(ii) / numImages(ii);
+        averageCompressionRatio(ii) = averageCompressionRatio(ii) / numImages;
         averagePSNR(ii) = averagePSNR(ii) / (numImages - perfectMatches(ii));
     end
     
