@@ -7,17 +7,16 @@ import random
 import gc
 
 
-round_parameter = 255.0
+quantization_step = 1.0/256.0
 
 @tf.grad_pass_through
 def c_func(x):
     result = tf.clip_by_value(x, 0.0, 1.0)
+    result = result * 255.0
+    result = tf.round(result)
+    result = result / 255.0
 
-    def grad(dy):
-        grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
-        return grad_out
-
-    return result, grad
+    return result
 
 
 class ClipSimNormalize(tf.keras.layers.Layer):
@@ -29,15 +28,12 @@ class ClipSimNormalize(tf.keras.layers.Layer):
 
 @tf.grad_pass_through
 def q_func(x):
-    result = tf.clip_by_value(x, 0.0, 1.0)
-    result = result * round_parameter
+    # functionally the same as midtread quanitization and dequantization
+    result = x / quantization_step
     result = tf.round(result)
-    result = result / round_parameter
+    result = result * quantization_step
 
-    # def grad(dy):
-    #     grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
-    #     return grad_out
-
+    # entropy of quantized and quantized then dequantized results are the same.
     return result
 
 
@@ -48,24 +44,6 @@ class QuantizeEmulation(tf.keras.layers.Layer):
         # return q_func(x)
         return q_func(x)
 
-@tf.grad_pass_through
-def r_func(x):
-    result = x * round_parameter
-    result = tf.round(result)
-    result = result / round_parameter
-
-    # def grad(dy):
-    #     grad_out = tf.ones_like(dy, dtype=tf.dtypes.float32)
-    #     return grad_out
-
-    return result
-
-
-class Round(tf.keras.layers.Layer):
-    def __init__(self):
-        super(Round, self).__init__()
-    def call(self, x):
-        return r_func(x)
 
 def create_model():
     # encoder
@@ -102,7 +80,7 @@ def create_model():
     encoder_output = tf.keras.layers.Conv2D(filters=96, kernel_size=[5, 5], strides=2, input_shape=x.shape)(x)
 
     # quantize
-    decoder_input = Round()(encoder_output)
+    decoder_input = QuantizeEmulation()(encoder_output)
 
     # decoder
     sub_pixel_factor = 2
@@ -134,7 +112,7 @@ def create_model():
     x = tf.nn.depth_to_space(x, sub_pixel_factor)
 
     # clip and round
-    decoder_output = QuantizeEmulation()(x)
+    decoder_output = ClipSimNormalize()(x)
 
     autoencoder = tf.keras.Model(inputs=encoder_input, outputs=decoder_output, name="CAE_model")
 
@@ -162,7 +140,7 @@ if __name__ == "__main__":
     used_data = random.sample(range(1, len(files)), 55000)
 
     print("Loading input files. This may take some time.")
-    for i in range(0, len(used_data)):
+    for i in range(0, 32):
         file = files[used_data[i]]
         image = cv2.imread(file)
         X_data.append(image / 255.0)
@@ -185,5 +163,5 @@ if __name__ == "__main__":
     CAE.load_weights(checkpoint_path)
 
     print("Beginning training.")
-    CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25, callbacks=[cp_callback])
-    # CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25)
+    #  CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25, callbacks=[cp_callback])
+    CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25)
