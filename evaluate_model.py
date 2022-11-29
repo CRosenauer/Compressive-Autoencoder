@@ -67,7 +67,7 @@ if __name__ == "__main__":
     num_batches = 250
     batch_size = int(eval_set_size / num_batches)
 
-    write_input_file_dir = r"F:\School\ENSC 424\ML-Project\validation\validation_input"
+    # write_input_file_dir = r"F:\School\ENSC 424\ML-Project\validation\validation_input"
     write_output_file_dir = r"F:\School\ENSC 424\ML-Project\validation\q_r128"
 
     for i in range(0, num_batches):
@@ -80,9 +80,9 @@ if __name__ == "__main__":
         model_output = model_output.numpy()
         model_output = model_output.astype('uint8')
 
-        os.chdir(write_input_file_dir)
-        for j in range(0, batch_size):
-            cv2.imwrite("validation_input" + str(i * batch_size + j) + ".png", data[j] * 255.0)
+        # os.chdir(write_input_file_dir)
+        # for j in range(0, batch_size):
+        #     cv2.imwrite("validation_input" + str(i * batch_size + j) + ".png", data[j] * 255.0)
 
         os.chdir(write_output_file_dir)
         for j in range(0, len(model_output)):
@@ -109,12 +109,11 @@ if __name__ == "__main__":
         for j in range(0, len(model_output)):
             total_entropy = total_entropy + Entropy(model_output[j], 16, 16, 96)
 
+        # for j in range(0, len(data)):
+        #     input_entropy = input_entropy + Entropy(data[j], 128, 128, 3)
 
-        for j in range(0, len(data)):
-            input_entropy = input_entropy + Entropy(data[j], 128, 128, 3)
-
-    average_input_entropy = total_entropy / eval_set_size
-    average_entropy = input_entropy / eval_set_size
+    average_input_entropy = 6.068404655049886
+    average_entropy = total_entropy / eval_set_size
 
     print("Performing model evaluation")
     CAE.compile(loss=tf.keras.losses.MeanSquaredError(),
@@ -130,4 +129,4 @@ if __name__ == "__main__":
     output_storage_size = 16*16*96*average_entropy
     print("Average Encoded Storage Size: " + str(output_storage_size))
 
-    print("Average Compression: " + str(100 * output_storage_size / input_storage_size) + "%")
+    print("Average Compression: " + str(output_storage_size / input_storage_size))
