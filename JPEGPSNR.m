@@ -1,3 +1,6 @@
+% ultimately unused due to problems with the used MATLAB jpeg compression
+% code. feel free to ignore.
+
 function [averageCompressionRatio, averagePSNR, perfectMatches] = JPEGPSNR(inputPath)
     averageCompressionRatio = zeros(10, 1);
     averagePSNR = zeros(10, 1);
