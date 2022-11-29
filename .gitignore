@@ -173,3 +173,4 @@ entropy_cod.m
 get_quantization.m
 huffman_cod.m
 jpeg_computing.m
+*.xlsx
