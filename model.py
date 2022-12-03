@@ -6,8 +6,11 @@ import numpy
 import random
 import gc
 
-
+# alters quantization step used for quantization and dequantization
 quantization_step = 1.0/256.0
+
+# determines if pre-trained weights should be used loaded before training
+load_weights = False
 
 @tf.grad_pass_through
 def c_func(x):
@@ -160,8 +163,9 @@ if __name__ == "__main__":
     checkpoint_dir = os.path.dirname(checkpoint_path)
     cp_callback = tf.keras.callbacks.ModelCheckpoint(filepath=checkpoint_path, save_weights_only=True, verbose=1, save_best_only=True)
 
-    CAE.load_weights(checkpoint_path)
+    if load_weights:
+        CAE.load_weights(checkpoint_path)
 
     print("Beginning training.")
-    #  CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25, callbacks=[cp_callback])
-    CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25)
+    CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25, callbacks=[cp_callback])
+    # CAE.fit(X_data, X_data, epochs=10000, shuffle=True, validation_split=0.25)
